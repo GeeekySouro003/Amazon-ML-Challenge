@@ -1,3 +1,6 @@
+## CHECK FOR IMAGE DIMESIONS
+
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -13,7 +16,7 @@ class FeatureExtraction(nn.Module):
         self.conv3=nn.Conv2d(64,128,kernel_size=3,padding=1)
         self.conv4=nn.Conv2d(128,256,kernel_size=3,padding=1)
         self.pool=nn.MaxPool2d(kernel_size=2,stride=2,padding=0)
-        self.fc1=nn.Linear(256*8*8*1024)
+        self.fc1=nn.Linear(256*8*8*1024) ## IMAGE DIMENSION
         self.fc2=nn.Linear(1024,512)
         self.fc3=nn.Linear(512,10)
     
