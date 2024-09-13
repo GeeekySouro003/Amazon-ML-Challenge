@@ -10,9 +10,12 @@ from tqdm import tqdm
 import numpy as np
 from pathlib import Path
 from functools import partial
-import requests
 import urllib
 from PIL import Image
+import logging
+
+# Setting up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 
 def common_mistake(unit):
     if unit in constants.allowed_units:
@@ -24,27 +27,30 @@ def common_mistake(unit):
     return unit
 
 def parse_string(s):
-    s_stripped = "" if s==None or str(s)=='nan' else s.strip()
+    s_stripped = "" if s == None or str(s) == 'nan' else s.strip()
     if s_stripped == "":
         return None, None
     pattern = re.compile(r'^-?\d+(\.\d+)?\s+[a-zA-Z\s]+$')
     if not pattern.match(s_stripped):
-        raise ValueError("Invalid format in {}".format(s))
+        logging.error(f"Invalid format found: {s}")
+        raise ValueError(f"Invalid format in {s}")
+    
     parts = s_stripped.split(maxsplit=1)
     number = float(parts[0])
     unit = common_mistake(parts[1])
+    
     if unit not in constants.allowed_units:
-        raise ValueError("Invalid unit [{}] found in {}. Allowed units: {}".format(
-            unit, s, constants.allowed_units))
+        logging.error(f"Invalid unit [{unit}] in {s}. Allowed units: {constants.allowed_units}")
+        raise ValueError(f"Invalid unit [{unit}] found in {s}")
+    
     return number, unit
-
 
 def create_placeholder_image(image_save_path):
     try:
         placeholder_image = Image.new('RGB', (100, 100), color='black')
         placeholder_image.save(image_save_path)
     except Exception as e:
-        return
+        logging.error(f"Error creating placeholder image: {e}")
 
 def download_image(image_link, save_folder, retries=3, delay=3):
     if not isinstance(image_link, str):
@@ -56,28 +62,33 @@ def download_image(image_link, save_folder, retries=3, delay=3):
     if os.path.exists(image_save_path):
         return
 
-    for _ in range(retries):
+    for attempt in range(retries):
         try:
             urllib.request.urlretrieve(image_link, image_save_path)
+            # Check if the downloaded image is valid
+            with Image.open(image_save_path) as img:
+                img.verify()  # Check for corrupted images
             return
-        except:
+        except Exception as e:
+            logging.warning(f"Failed to download {image_link} (Attempt {attempt+1}/{retries}): {e}")
             time.sleep(delay)
-    
-    create_placeholder_image(image_save_path) #Create a black placeholder image for invalid links/images
+
+    # If download fails, create a placeholder image
+    logging.error(f"Failed to download {image_link} after {retries} attempts. Creating placeholder.")
+    create_placeholder_image(image_save_path)
 
 def download_images(image_links, download_folder, allow_multiprocessing=True):
     if not os.path.exists(download_folder):
         os.makedirs(download_folder)
 
-    if allow_multiprocessing:
-        download_image_partial = partial(
-            download_image, save_folder=download_folder, retries=3, delay=3)
+    download_image_partial = partial(
+        download_image, save_folder=download_folder, retries=3, delay=3)
 
-        with multiprocessing.Pool(64) as pool:
+    if allow_multiprocessing:
+        with multiprocessing.Pool(min(64, multiprocessing.cpu_count())) as pool:
             list(tqdm(pool.imap(download_image_partial, image_links), total=len(image_links)))
             pool.close()
             pool.join()
     else:
         for image_link in tqdm(image_links, total=len(image_links)):
             download_image(image_link, save_folder=download_folder, retries=3, delay=3)
-        
