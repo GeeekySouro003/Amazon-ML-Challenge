@@ -18,5 +18,5 @@ def load_image(image_path): ## preprocessing the image
     ##return text
     
 if __name__ == "__main__":
-    img=load_image('../images/41ADVPQgZOL.jpg')
+    img=load_image('../sample_images/test.jpg')
     print(img.shape)
