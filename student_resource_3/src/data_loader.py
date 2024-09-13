@@ -1,22 +1,25 @@
-import torch
-from torchvision import transforms
-from PIL import Image
+from torchvision import transforms, datasets
+from torch.utils.data import DataLoader
+import os
 
-def get_transforms () : ## tranforms for resizing the image,normalizing positon etc
-    return transforms.Compose([
-        transforms.Resize((224,224)), ## size of 224x224
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225]),  
-    ])
-def load_image(image_path): ## preprocessing the image
-    image=Image.open(image_path)
-    transform = get_transforms()
-    return transform(image)
-
-##def preprocess_ocr_text(text):
-  ##  text=text.lower().strip()
-    ##return text
+def get_data_loaders(train_dir, val_dir=None, batch_size=32):
+    if not os.path.isdir(train_dir):
+        raise ValueError(f"Training directory {train_dir} does not exist")
     
-if __name__ == "__main__":
-    img=load_image('../sample_images/test.jpg')
-    print(img.shape)
+    transform = transforms.Compose([
+        transforms.Resize((128, 128)),
+        transforms.ToTensor()
+    ])
+
+    train_dataset = datasets.ImageFolder(root=train_dir, transform=transform)
+    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
+    
+    val_loader = None
+    if val_dir and os.path.isdir(val_dir):
+        val_dataset = datasets.ImageFolder(root=val_dir, transform=transform)
+        val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=False)
+
+    return train_loader, val_loader
+
+# Usage
+train_loader, val_loader = get_data_loaders('path_to_training_data', 'path_to_validation_data')

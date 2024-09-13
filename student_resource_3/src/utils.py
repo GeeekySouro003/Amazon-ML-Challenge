@@ -24,21 +24,26 @@ def common_mistake(unit):
         return unit.replace('ter', 'tre')
     if unit.replace('feet', 'foot') in constants.allowed_units:
         return unit.replace('feet', 'foot')
+    if unit == 'lbs':
+        return 'pound'  # Fix 'lbs' to 'pound'
     return unit
 
 def parse_string(s):
     s_stripped = "" if s == None or str(s) == 'nan' else s.strip()
     if s_stripped == "":
         return None, None
+    # Pattern to check if the format is valid: number followed by a unit
     pattern = re.compile(r'^-?\d+(\.\d+)?\s+[a-zA-Z\s]+$')
     if not pattern.match(s_stripped):
         logging.error(f"Invalid format found: {s}")
         raise ValueError(f"Invalid format in {s}")
     
+    # Split the string into number and unit
     parts = s_stripped.split(maxsplit=1)
     number = float(parts[0])
     unit = common_mistake(parts[1])
     
+    # Validate if the unit is in the allowed units
     if unit not in constants.allowed_units:
         logging.error(f"Invalid unit [{unit}] in {s}. Allowed units: {constants.allowed_units}")
         raise ValueError(f"Invalid unit [{unit}] found in {s}")
