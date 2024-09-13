@@ -1,7 +1,7 @@
 import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
-from model import FeatureExtractionCNN
+from model import FeatureExtraction
 from data_loader import get_transforms
 from PIL import Image
 import pandas as pd
@@ -35,7 +35,7 @@ def main():
     train_loader = DataLoader(dataset=train_dataset, batch_size=32, shuffle=True)
 
     # Initialize the model, criterion, and optimizer
-    model = FeatureExtractionCNN()
+    model = FeatureExtraction()
     criterion = torch.nn.CrossEntropyLoss()  # Use appropriate loss function based on your task
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
