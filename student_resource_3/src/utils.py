@@ -1,35 +1,31 @@
-import re
-import constants
 import os
-import requests
+import urllib
+import numpy as np
 import pandas as pd
 import multiprocessing
-import time
-from time import time as timer
-from tqdm import tqdm
-import numpy as np
-from pathlib import Path
-from functools import partial
-import urllib
-from PIL import Image
 import logging
+import time
+import re
+from PIL import Image
+from tqdm import tqdm
+from constants import allowed_units
 
 # Setting up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 
 def common_mistake(unit):
-    if unit in constants.allowed_units:
+    if unit in allowed_units:
         return unit
-    if unit.replace('ter', 'tre') in constants.allowed_units:
+    if unit.replace('ter', 'tre') in allowed_units:
         return unit.replace('ter', 'tre')
-    if unit.replace('feet', 'foot') in constants.allowed_units:
+    if unit.replace('feet', 'foot') in allowed_units:
         return unit.replace('feet', 'foot')
     if unit == 'lbs':
         return 'pound'  # Fix 'lbs' to 'pound'
     return unit
 
 def parse_string(s):
-    s_stripped = "" if s == None or str(s) == 'nan' else s.strip()
+    s_stripped = "" if s is None or str(s) == 'nan' else s.strip()
     if s_stripped == "":
         return None, None
     # Pattern to check if the format is valid: number followed by a unit
@@ -44,8 +40,8 @@ def parse_string(s):
     unit = common_mistake(parts[1])
     
     # Validate if the unit is in the allowed units
-    if unit not in constants.allowed_units:
-        logging.error(f"Invalid unit [{unit}] in {s}. Allowed units: {constants.allowed_units}")
+    if unit not in allowed_units:
+        logging.error(f"Invalid unit [{unit}] in {s}. Allowed units: {allowed_units}")
         raise ValueError(f"Invalid unit [{unit}] found in {s}")
     
     return number, unit
@@ -61,7 +57,7 @@ def download_image(image_link, save_folder, retries=3, delay=3):
     if not isinstance(image_link, str):
         return
 
-    filename = Path(image_link).name
+    filename = os.path.basename(image_link)
     image_save_path = os.path.join(save_folder, filename)
 
     if os.path.exists(image_save_path):
@@ -86,12 +82,10 @@ def download_images(image_links, download_folder, allow_multiprocessing=True):
     if not os.path.exists(download_folder):
         os.makedirs(download_folder)
 
-    download_image_partial = partial(
-        download_image, save_folder=download_folder, retries=3, delay=3)
-
     if allow_multiprocessing:
         with multiprocessing.Pool(min(64, multiprocessing.cpu_count())) as pool:
-            list(tqdm(pool.imap(download_image_partial, image_links), total=len(image_links)))
+            # Use lambda to pass additional arguments to download_image
+            list(tqdm(pool.imap(lambda link: download_image(link, download_folder), image_links), total=len(image_links)))
             pool.close()
             pool.join()
     else:
